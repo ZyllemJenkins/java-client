@@ -46,7 +46,7 @@ public class SignalRFuture<V> implements Future<V> {
     /**
      * Cancels the operation
      */
-    public void cancel() {
+    public synchronized void cancel() {
         mIsCancelled = true;
         if (mOnCancelled != null) {
             for (Runnable onCancelled : mOnCancelled) {
