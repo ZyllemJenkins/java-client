@@ -78,6 +78,13 @@ public interface ConnectionBase {
     public void onError(Throwable error, boolean mustCleanCurrentConnection);
 
     /**
+     * Sets the handler for the "Heartbeat" event
+     */
+    public void received(HeartbeatHandler handler);
+
+    public void onHeartbeat();
+
+    /**
      * Sets the handler for the "Received" event
      */
     public void received(MessageReceivedHandler handler);

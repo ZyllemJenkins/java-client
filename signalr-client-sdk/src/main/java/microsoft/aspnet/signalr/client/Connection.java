@@ -22,7 +22,6 @@ import microsoft.aspnet.signalr.client.transport.ConnectionType;
 import microsoft.aspnet.signalr.client.transport.DataResultCallback;
 import microsoft.aspnet.signalr.client.transport.NegotiationResponse;
 import microsoft.aspnet.signalr.client.transport.TransportHelper;
-import microsoft.aspnet.signalr.client.Logger;
 
 /**
  * Represents a basic SingalR connection
@@ -60,6 +59,8 @@ public class Connection implements ConnectionBase {
     private Runnable mOnReconnected;
 
     private Runnable mOnConnected;
+
+    private HeartbeatHandler mOnHeartbeat;
 
     private MessageReceivedHandler mOnReceived;
 
@@ -231,6 +232,11 @@ public class Connection implements ConnectionBase {
     @Override
     public void error(ErrorCallback handler) {
         mOnError = handler;
+    }
+
+    @Override
+    public void received(HeartbeatHandler handler) {
+        mOnHeartbeat = handler;
     }
 
     @Override
@@ -732,6 +738,7 @@ public class Connection implements ConnectionBase {
      *            The received data
      */
     private void processReceivedData(String data) {
+        onHeartbeat();
         if (mHeartbeatMonitor != null) {
             mHeartbeatMonitor.beat();
         }
@@ -822,6 +829,19 @@ public class Connection implements ConnectionBase {
 
     protected String getSourceNameForLog() {
         return "Connection";
+    }
+
+    @Override
+    public void onHeartbeat() {
+        if (mOnHeartbeat!=null && getState() == ConnectionState.Connected){
+            log("Invoking heartbeatReceived", LogLevel.Verbose);
+            try{
+                mOnHeartbeat.onHeartbeatReceived();
+            }
+            catch (Throwable error){
+                onError(error,false);
+            }
+        }
     }
 
     @Override
