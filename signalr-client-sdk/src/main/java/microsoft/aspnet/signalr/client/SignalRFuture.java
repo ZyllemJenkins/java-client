@@ -20,15 +20,16 @@ import java.util.concurrent.TimeoutException;
  * Represents long running SignalR operations
  */
 public class SignalRFuture<V> implements Future<V> {
-    boolean mIsCancelled = false;
-    boolean mIsDone = false;
+    private boolean mIsCancelled = false;
+    private boolean mIsDone = false;
     private V mResult = null;
-    private List<Runnable> mOnCancelled = new ArrayList<Runnable>();
-    private List<Action<V>> mOnDone = new ArrayList<Action<V>>();
-    private Object mDoneLock = new Object();
-    private List<ErrorCallback> mErrorCallback = new ArrayList<ErrorCallback>();
-    private Queue<Throwable> mErrorQueue = new ConcurrentLinkedQueue<Throwable>();
-    private Object mErrorLock = new Object();
+    private List<Runnable> mOnCancelled = new ArrayList<>();
+    private final Object mCancelLock = new Object();
+    private List<Action<V>> mOnDone = new ArrayList<>();
+    private final Object mDoneLock = new Object();
+    private List<ErrorCallback> mErrorCallback = new ArrayList<>();
+    private Queue<Throwable> mErrorQueue = new ConcurrentLinkedQueue<>();
+    private final Object mErrorLock = new Object();
     private Throwable mLastError = null;
 
     private Semaphore mResultSemaphore = new Semaphore(0);
@@ -40,20 +41,24 @@ public class SignalRFuture<V> implements Future<V> {
      *            The handler
      */
     public void onCancelled(Runnable onCancelled) {
-        mOnCancelled.add(onCancelled);
+        synchronized (mCancelLock) {
+            mOnCancelled.add(onCancelled);
+        }
     }
 
     /**
      * Cancels the operation
      */
-    public synchronized void cancel() {
-        mIsCancelled = true;
-        if (mOnCancelled != null) {
-            for (Runnable onCancelled : mOnCancelled) {
-                onCancelled.run();
+    public void cancel() {
+        synchronized (mCancelLock){
+            mIsCancelled = true;
+            if (mOnCancelled != null) {
+                for (Runnable onCancelled : mOnCancelled) {
+                    onCancelled.run();
+                }
             }
+            mResultSemaphore.release();
         }
-        mResultSemaphore.release();
     }
 
     /**
